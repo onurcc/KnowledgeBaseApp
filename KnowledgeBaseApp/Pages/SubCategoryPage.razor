@@ -1,0 +1,252 @@
+﻿@page "/subcategory"
+@using KnowledgeBaseApp.Data
+@using KnowledgeBaseApp.Services
+@using BlazorInputFile
+@using System.IO
+
+@inherits OwningComponentBase<SubCategoryService>
+
+    <AuthorizeView>
+
+        <Authorized Context="Auth">
+
+            @if (subcategories == null)
+            {
+            <p><em>Loading...</em></p>
+            }
+            else
+            {
+            <div class="container border p-3">
+                <div class="row">
+                    <div class="col-5">
+                        <h3 class="text-info">SubCategory List</h3>
+                    </div>
+                    <div class="col-3 offset-4">
+                        <button class="btn btn-info form-control" @onclick="AddNewSubCategory">
+                            Add New SubCategory
+                        </button>
+                    </div>
+                </div>
+
+                <div class="row pt-4">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>SubCategory Name</th>
+                                <th>Category</th>
+                                <th>SubCategory Icon</th>
+                                <th>Image</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var obj in subcategories)
+                            {
+                            <tr>
+                                <td>@obj.Name</td>
+                                <td>@obj.Category.Name</td>
+                                <td>@obj.IconName <i class="@obj.IconName"></i></td>
+                                <td><img src="@convertImageToDisplay(obj.Image)" width="5%" /></td>
+                                <td>
+                                    <button class="btn btn-primary" style="width:150px" @onclick="(()=> EditSubCategory(obj))">
+                                        Edit
+                                    </button>
+                                </td>
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            }
+
+        </Authorized>
+
+        <NotAuthorized>
+            <p>Please sign in to see subcategory page!</p>
+        </NotAuthorized>
+
+    </AuthorizeView>
+
+    @if (ShowPopup)
+    {
+    <div class="modal" tabindex="-1" style="display:block" role="dialog">
+        <EditForm Model="@objSubCategory" OnValidSubmit="@ValidSubmit">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 class="text-info">@(objSubCategory.Id !=0 ? "Update" : "Create") SubCategory</h3>
+                        <button type="button" class="close" @onclick="ClosePopup">
+                            <span aria-hidden="true">X</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <DataAnnotationsValidator />
+                        @*<ValidationSummary />*@
+                        <div class="row">
+                            <div class="col-9">
+                                <div class="row py-2">
+                                    <div class="col-3">
+                                        Category Name
+                                    </div>
+                                    <div class="col-8">
+                                        <select @onchange="CategorySelectionChanged" class="form-control">
+                                            @foreach (var categoryInd in categories)
+                                            {
+                                                <option value="@categoryInd.Id" selected="@(categoryInd.Id==objSubCategory.CategoryId? true: false)">@categoryInd.Name</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="row py-2">
+                                    <div class="col-3">
+                                        SubCategory Name
+                                    </div>
+                                    <div class="col-8">
+                                        <InputText class="form-control" @bind-Value="objSubCategory.Name" />
+                                        <ValidationMessage For="@(()=> objSubCategory.Name)"></ValidationMessage>
+                                    </div>
+                                </div>
+                                <div class="row py-2">
+                                    <div class="col-3">
+                                        SubCategory Icon
+                                    </div>
+                                    <div class="col-8">
+                                        <InputText class="form-control" @bind-Value="objSubCategory.IconName" />
+                                        <ValidationMessage For="@(()=> objSubCategory.IconName)"></ValidationMessage>
+                                    </div>
+                                </div>
+                                <div class="row py-2">
+                                    <div class="col-3">
+                                        Image
+                                    </div>
+                                    <div class="col-8">
+                                        <InputFile OnChange="HandleSelection"></InputFile>
+                                    </div>
+                                </div>
+                                <div class="row py-2">
+                                    <div class="offset-4 col">
+                                        <button class="btn btn-primary form-control" type="submit">Submit</button>
+                                    </div>
+                                    @if (objSubCategory.Id > 0)
+                                    {
+                                        <div class="col">
+                                            <button class="btn btn-danger form-control"
+                                                    @onclick="DeleteSubCategory"
+                                                    type="submit">
+                                                Delete
+                                            </button>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                            <div class="col-3">
+                                <img src="@convertImageToDisplay(objSubCategory.Image)" width="100%" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </EditForm>
+    </div>
+    }
+
+    @code {
+
+        List<Category>
+            categories;
+        List<SubCategory>
+            subcategories;
+        SubCategory objSubCategory = new SubCategory();
+        bool ShowPopup = false;
+        public byte[] ImageUploaded { get; set; }
+
+        protected override void OnInitialized()
+        {
+            subcategories = Service.GetSubCategories();
+        }
+
+        void AddNewSubCategory()
+        {
+            objSubCategory = new SubCategory();
+            categories = Service.GetCategoryList();
+            objSubCategory.CategoryId = categories.ToList()[0].Id;
+            objSubCategory.Id = 0;
+            ShowPopup = true;
+        }
+
+        void EditSubCategory(SubCategory subcategory)
+        {
+            objSubCategory = subcategory;
+            categories = Service.GetCategoryList();
+            ShowPopup = true;
+        }
+
+        void DeleteSubCategory()
+        {
+            ShowPopup = false;
+            var result = Service.DeleteSubCategory(objSubCategory);
+            subcategories.Clear();
+            subcategories = Service.GetSubCategories();
+        }
+
+        void ClosePopup()
+        {
+            ShowPopup = false;
+        }
+
+        void ValidSubmit()
+        {
+            var result = false;
+            ShowPopup = false;
+            if (ImageUploaded != null)
+            {
+                objSubCategory.Image = ImageUploaded;
+                ImageUploaded = null;
+            }
+
+            if (objSubCategory.Id > 0)
+            {
+                result = Service.UpdateSubCategory(objSubCategory);
+            }
+            else
+            {
+                result = Service.CreateSubCategory(objSubCategory);
+            }
+
+
+
+            subcategories = Service.GetSubCategories();
+        }
+
+        async Task HandleSelection(IFileListEntry[] files)
+        {
+            var file = files.FirstOrDefault();
+            if (file != null)
+            {
+                var ms = new MemoryStream();
+                await file.Data.CopyToAsync(ms);
+                ImageUploaded = ms.ToArray();
+            }
+        }
+
+        string convertImageToDisplay(byte[] image)
+        {
+            if (image != null)
+            {
+                var base64 = Convert.ToBase64String(image);
+                var finalStr = string.Format("data:image/jpg;base64,{0}", base64);
+                return finalStr;
+            }
+            return "";
+        }
+
+        void CategorySelectionChanged(Microsoft.AspNetCore.Components.ChangeEventArgs e)
+        {
+            if (int.TryParse(e.Value.ToString(), out int id))
+            {
+                objSubCategory.CategoryId = id;
+            }
+        }
+
+            }

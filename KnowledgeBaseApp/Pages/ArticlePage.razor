@@ -1,0 +1,337 @@
+﻿@page "/article"
+@using KnowledgeBaseApp.Data
+@using KnowledgeBaseApp.Services
+@using BlazorInputFile
+@using System.IO
+@using System.Data.SqlClient
+@using Syncfusion.Blazor.RichTextEditor
+@using Syncfusion.Blazor.DocumentEditor
+
+
+@inherits OwningComponentBase<ArticleService>
+
+<AuthorizeView>
+
+<Authorized Context="Auth">
+
+@if (articles == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="container border p-3">
+        <div class="row">
+            <div class="col-5">
+                <h3 class="text-info">Article List</h3>
+            </div>
+            <div class="col-3 offset-4">
+                <button class="btn btn-info form-control" @onclick="AddNewArticle">
+                    Add New Article
+                </button>
+            </div>
+        </div>
+
+        <div class="row pt-4">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Article Name</th>
+                        <th>Category</th>
+                        <th>Sub Category</th>
+                        @*<th>Content</th>*@
+                        <th>Article Date</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var obj in articles)
+                    {
+                        <tr>
+                            <td>@obj.Title</td>   
+                            
+                            <td>@GetCategoriesNameByID(obj.CategoryId)</td>
+
+                            <td>@obj.SubCategory.Name</td>
+                            @*<td>@obj.Content</td>*@
+                            <td>@obj.ArticleDate.ToString("dd/MM/yyyy")</td>
+                            <td>
+                                <button class="btn btn-primary" style="width:150px" @onclick="(()=> EditArticle(obj))">
+                                    Edit
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+</Authorized>
+
+<NotAuthorized>
+    <p>Please sign in to see article page!</p>
+</NotAuthorized>
+
+</AuthorizeView>
+
+@if (ShowPopup)
+{
+    <div class="modal" tabindex="-1" style="display:block" role="dialog">
+        <EditForm Model="@objArticle" OnValidSubmit="@ValidSubmit">
+            <div class="modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 class="text-info">@(objArticle.Id !=0 ? "Update" : "Create") Article</h3>
+                        <button type="button" class="close" @onclick="ClosePopup">
+                            <span aria-hidden="true">X</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <DataAnnotationsValidator />
+                        @*<ValidationSummary />*@
+                        <div class="row">
+                            <div class="col-12">
+
+                                <div class="row py-2">
+
+                                    <div class="col-9">
+
+                                        <div class="row py-2">
+                                            <div class="col-4">
+                                                Category Name
+                                            </div>
+                                            <div class="col-8">
+                                                <select @onchange="CategorySelectionChanged"  class="form-control">
+                                                    @foreach (var categoryInd in categories)
+                                                    {
+                                                        <option value="@categoryInd.Id" selected="@(categoryInd.Id==objArticle.CategoryId? true: false)">@categoryInd.Name</option>
+                                                    }
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div class="row py-2">
+                                            <div class="col-4">
+                                                SubCategory Name
+                                            </div>
+                                            <div class="col-8">
+                                                <select @onchange="SubCategorySelectionChanged" class="form-control">
+                                                    @foreach (var subcategoryInd in subcategories)
+                                                    {
+                                                        <option value="@subcategoryInd.Id" selected="@(subcategoryInd.Id==objArticle.SubCategoryId? true: false)">@subcategoryInd.Name</option>                                                        
+                                                    }
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div class="row py-2">
+                                            <div class="col-4">
+                                                Article Title
+                                            </div>
+                                            <div class="col-8">
+                                                <InputText class="form-control" @bind-Value="objArticle.Title" />
+                                                <ValidationMessage For="@(()=> objArticle.Title)"></ValidationMessage>
+                                            </div>
+                                        </div>
+                                        @*<div class="row py-2">
+                                                <div class="col-4">
+                                                    Content
+                                                </div>
+                                                <div class="col-8">
+                                                    <InputText class="form-control" @bind-Value="objArticle.Content" />
+                                                    <ValidationMessage For="@(()=> objArticle.Content)"></ValidationMessage>
+                                                </div>
+                                            </div>*@
+                                        <div class="row py-2">
+                                            <div class="col-4">
+                                                Article Date
+                                            </div>
+                                            <div class="col-8">
+                                                <InputDate @bind-Value="@objArticle.ArticleDate" class="form-control" />
+                                            </div>
+                                        </div>
+                                        <div class="row py-2">
+                                            <div class="col-4">
+                                                Article Image
+                                            </div>
+                                            <div class="col-8">
+                                                <InputFile OnChange="HandleSelection"></InputFile>
+                                            </div>
+                                        </div>
+
+                                    </div>
+
+                                    <div class="col-3">
+                                        <img class="mx-auto d-block" src="@convertImageToDisplay(objArticle.ArticleImage)" width="50%" />
+                                    </div>
+
+                                </div>
+
+                                <div class="row py-2">
+                                    <KnowledgeBaseApp.Pages.Components.ArticleEditorComponent @bind-BindingValue="objArticle.Content"></KnowledgeBaseApp.Pages.Components.ArticleEditorComponent>
+                                </div>                                
+                                <div class="row py-2">
+                                    <div class="offset-4 col">
+                                        <button class="btn btn-primary form-control" @onclick="ValidSubmit" type="submit">Submit</button>
+                                    </div>
+                                    @if (objArticle.Id > 0)
+                                    {
+                                        <div class="col">
+                                            <button class="btn btn-danger form-control"
+                                                    @onclick="DeleteArticle"
+                                                    type="submit">
+                                                Delete
+                                            </button>
+                                        </div>
+                                    }
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </EditForm>
+    </div>
+}
+
+@code {
+
+    List<Category>
+        categories;
+    List<SubCategory>
+        subcategories;   
+    List<Article>
+        articles;
+    Article objArticle = new Article();
+    bool ShowPopup = false;
+    public byte[] ImageUploaded { get; set; }
+
+
+    protected override void OnInitialized()
+    {
+        articles = Service.GetArticles();
+    }
+
+    void AddNewArticle()
+    {
+        objArticle = new Article();
+        categories = Service.GetCategoryList();
+        subcategories = Service.GetSubCategoryList();
+        objArticle.CategoryId = subcategories.ToList()[0].CategoryId;
+        objArticle.SubCategoryId = subcategories.ToList()[0].Id;
+        objArticle.Id = 0;
+        objArticle.ArticleDate = DateTime.Now;
+        ShowPopup = true;
+    }
+
+    protected string GetCategoriesNameByID(object iD)
+    {        
+        categories = Service.GetCategoryList();
+
+        var result = (from c in categories where c.Id.ToString() == iD.ToString() select c).First().Name;
+
+        return result;
+    }
+
+    //cascading dropdown
+
+    protected string GetSubCategoriesByCategory(object iD)
+    {
+        //subcategories = Service.GetSubCategoryList();
+
+        var result = (from s in subcategories where s.CategoryId.ToString() == iD.ToString() select s).First().Name;
+
+        return result;
+    }
+
+    void EditArticle(Article article)
+    {
+        objArticle = article;
+        categories = Service.GetCategoryList();
+        subcategories = Service.GetSubCategoryList();
+        ShowPopup = true;
+    }
+
+    void DeleteArticle()
+    {
+        ShowPopup = false;
+        var result = Service.DeleteArticles(objArticle);
+        articles.Clear();
+        articles = Service.GetArticles();
+    }
+
+    void ClosePopup()
+    {
+        ShowPopup = false;
+    }
+
+    void ValidSubmit()
+    {
+        var result = false;
+        ShowPopup = false;
+
+        if (ImageUploaded != null)
+        {
+            objArticle.ArticleImage = ImageUploaded;
+            ImageUploaded = null;
+        }
+
+        if (objArticle.Id > 0)
+        {
+            result = Service.UpdateArticle(objArticle);
+        }
+        else
+        {
+            result = Service.CreateArticle(objArticle);
+        }
+        articles = Service.GetArticles();
+    }
+
+    void CategorySelectionChanged(Microsoft.AspNetCore.Components.ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value.ToString(), out int id))
+        {
+            objArticle.CategoryId = id;
+
+            subcategories = Service.GetSubCategoryList();
+
+            //cascading dropdown
+            
+            subcategories = subcategories.Where(c => c.CategoryId == id).ToList();
+        }
+    }
+
+    void SubCategorySelectionChanged(Microsoft.AspNetCore.Components.ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value.ToString(), out int id))
+        {
+            objArticle.SubCategoryId = id;
+        }
+    }
+
+    async Task HandleSelection(IFileListEntry[] files)
+    {
+        var file = files.FirstOrDefault();
+        if (file != null)
+        {
+            var ms = new MemoryStream();
+            await file.Data.CopyToAsync(ms);
+            ImageUploaded = ms.ToArray();
+        }
+    }
+
+    string convertImageToDisplay(byte[] image)
+    {
+        if (image != null)
+        {
+            var base64 = Convert.ToBase64String(image);
+            var finalStr = string.Format("data:image/jpg;base64,{0}", base64);
+            return finalStr;
+        }
+        return "";
+    }
+
+}

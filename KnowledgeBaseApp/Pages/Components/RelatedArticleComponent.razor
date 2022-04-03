@@ -1,0 +1,51 @@
+﻿@using KnowledgeBaseApp.Data
+@using KnowledgeBaseApp.Services
+
+@inherits OwningComponentBase<ArticleService>
+
+<div class="md-6 mt-4">
+    <div class="col-md-6">
+        <h3>Related Articles</h3>        
+    </div>
+    <hr />
+    <div class="col-md-12">
+        <div class="row">
+            @foreach(var obj in RelatedArticleList)
+            {            
+            
+                    <div class="col">
+                        <div class="card mb-4">
+                              <img class="card-img-top mx-auto mt-3" style="height:100%;" src="@convertImageToDisplay(obj.ArticleImage)" alt="Card Image" />
+                              <div class="card-body mx-auto">
+                                <h5 class="card-title">@obj.Title</h5>
+                                @*<p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>*@
+                                <a href='@("/readarticle/" + obj.Id)' class="btn btn-primary">Read article</a>
+                              </div>
+                        </div>
+                    </div>
+            
+            }
+        </div>
+    </div>
+
+</div>
+
+@code {
+    List<Article> RelatedArticleList;
+
+    string convertImageToDisplay(byte[] image)
+    {
+        if (image != null)
+        {
+            var base64 = Convert.ToBase64String(image);
+            var finalStr = string.Format("data:image/jpg;base64,{0}", base64);
+            return finalStr;
+        }
+        return "";
+    }
+
+    protected override void OnInitialized()
+    {
+        RelatedArticleList = Service.RelatedArticles(1);
+    }
+}

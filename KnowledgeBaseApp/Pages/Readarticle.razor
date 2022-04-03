@@ -1,0 +1,77 @@
+﻿@page "/readarticle/{articleId}"
+
+@using KnowledgeBaseApp.Data
+@using KnowledgeBaseApp.Services
+@inject IJSRuntime JSRuntime
+@inject NavigationManager MyNavigationManager
+
+
+@inherits OwningComponentBase<ArticleService>
+
+<div class="container">
+    <div class="col-md-8 offset-2 align-self-center">
+        @foreach (var obj in articles)
+        {
+            @if (@articleId == obj.Id.ToString())
+            {
+                <div class="container mb-5">
+                    <span class="text-muted">@obj.SubCategory.Name</span>
+                    <span class="text-muted float-right">@obj.ArticleDate.ToString("dd/MM/yyyy")</span>
+                    <hr />
+                    <h1>
+                        @obj.Title
+                    </h1>
+
+                    <br />
+
+                    <div class="form-inline">
+                        @*<input id="form-control" type="text" value="@("https://localhost:44300/readarticle/"+@articleId)" />*@
+                        <button type="button" class="btn btn-primary" @onclick="CopyTextToClipboard">Copy Url</button>
+                    </div>
+
+                    <br />
+
+                    <div class="text-break">@((MarkupString)obj.Content)</div>
+                </div
+         
+                <KnowledgeBaseApp.Pages.Components.RelatedArticleComponent></KnowledgeBaseApp.Pages.Components.RelatedArticleComponent>
+
+            
+            }        
+        }
+    </div>
+</div>
+
+@*<div class="helpful-prompt float-right text-center fixed-bottom col-sm-1 ml-auto mr-4">
+    <div class="survey mb-2">
+        <h6>Was this helpful?</h6>
+        <button class="btn btn-sm btn-success text-white mr-3 survey-submit">Yes</button>
+        <button class="btn btn-sm btn-danger text-white survey-submit">No</button>
+    </div>
+    <div class="alert alert-success alert-dismissable survey-alert">
+        Thanks for your feedback.
+    </div>
+</div>*@
+
+
+@code {
+    [Parameter]
+    public string articleId { get; set; }
+
+    public string Text { get; set; }
+
+    List<Article> articles;
+
+    protected override void OnInitialized()
+    {
+        articles = Service.GetArticles();
+    }
+
+    private async Task CopyTextToClipboard()
+    {
+        Text = @MyNavigationManager.Uri;
+        await JSRuntime.InvokeVoidAsync("clipboardCopy.copyText", Text);
+    }
+
+    
+}

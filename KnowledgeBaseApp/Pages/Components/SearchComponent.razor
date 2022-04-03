@@ -1,0 +1,23 @@
+﻿@inject NavigationManager NavigationManager
+
+
+<div class="input-group col-md-6">
+    <div class="input-group">
+        <input type="search" @bind="@src" class="form-control" placeholder="Search for an article">
+        <div class="input-group-append">
+            <button class="btn btn-outline-secondary" type="button" @onclick=NavigateSearch>Search</button>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    public string src { get; set; }
+
+
+    public void NavigateSearch()
+    {
+        NavigationManager.NavigateTo("/search/" + src);
+    }
+
+}

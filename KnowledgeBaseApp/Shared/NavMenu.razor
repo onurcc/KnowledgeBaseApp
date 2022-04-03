@@ -1,0 +1,218 @@
+﻿@using KnowledgeBaseApp.Data
+@using KnowledgeBaseApp.Services
+@inject MenuService MenuService
+
+<div class="top-row pl-4 navbar navbar-dark">
+    <a class="navbar-brand" href="">KnowledgeBaseApp</a>
+    <button class="navbar-toggler">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+</div>
+
+<div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+
+    @if (menuList == null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        <ul class="nav flex-column">
+            @foreach (var mn in menuList)
+            {
+                @if (mn.MenuType == "category")
+                {
+                    <li class="nav-item px-3">
+                        <NavLink class="nav-link" href="@mn.PageName" @onclick="()=>GetIsClicked(mn)">
+                            <span class="@mn.IconName" aria-hidden="true">&ensp;&ensp;</span>@mn.MenuName
+                            @if (mn.MenuId == clickedMenu)
+                            {
+                                <i class="ml-auto fas fa-chevron-down"></i>
+                            }
+                            else
+                            {
+                                <i class="ml-auto fas fa-chevron-right"></i>
+                            }
+                        </NavLink>
+                        <ul class="nav flex-column">
+                            @foreach (var mn1 in menuList)
+                            {
+                                @if (mn.MenuId == mn1.ParentMenuId && mn1.MenuType == "subcategory")
+                                {
+                                    @if (expandSubNav && mn.MenuId == clickedMenu)
+                                    {
+                                        <li class="nav-item px-3">
+                                            <NavLink class="nav-link" href="@mn1.PageName" @onclick="()=>GetIsSubClicked(mn1)">
+                                                <span class="@mn1.IconName" aria-hidden="true">&ensp;&ensp;</span>@mn1.MenuName
+                                                @if (mn1.MenuId == clickedSubMenu)
+                                                {
+                                                    <i class="ml-auto fas fa-chevron-down"></i>
+                                                }
+                                                else
+                                                {
+                                                    <i class="ml-auto fas fa-chevron-right"></i>
+                                                }
+                                            </NavLink>
+                                            <ul class="nav flex-column">
+                                                @foreach (var mn2 in menuList)
+                                                {
+                                                    @if (mn2.PageName != null && mn1.MenuId == mn2.ParentMenuId && mn2.MenuType == "article" && mn1.MenuType == "subcategory")
+                                                    {
+                                                        @if (expandArticleNav && mn1.MenuId == clickedSubMenu)
+                                                        {
+                                                            <li class="nav-item px-3">
+                                                                <NavLink class="nav-link" href='@("/readarticle/" + mn2.MenuId)'>
+                                                                    @mn2.MenuName
+                                                                </NavLink>
+                                                            </li>
+                                                        }
+                                                    }
+                                                }
+
+                                            </ul>
+                                        </li>
+                                    }
+                                }
+                            }
+                        </ul>
+                    </li>
+                }
+            }
+        </ul>
+    }
+
+    
+
+    <AuthorizeView>
+        <Authorized>
+            <hr />
+
+            <ul class="nav flex-column">
+
+                <li class="nav-item px-3">
+                    <NavLink class="nav-link" @onclick="()=>expandAdminNav = !expandAdminNav">
+                        <span class="oi oi-list-rich" aria-hidden="true"></span> Manage Pages
+                        @if (expandAdminNav)
+                        {
+                            <i class="ml-auto fas fa-chevron-down"></i>
+                        }
+                        else
+                        {
+                            <i class="ml-auto fas fa-chevron-right"></i>
+                        }
+                    </NavLink>
+                </li>
+                @if (expandAdminNav)
+                {
+                    <li class="nav-item px-3">
+                        <NavLink class="nav-link" href="category">
+                            <span class="oi oi-list-rich" aria-hidden="true"></span> Categories
+                        </NavLink>
+                    </li>
+                    <li class="nav-item px-3">
+                        <NavLink class="nav-link" href="subcategory">
+                            <span class="oi oi-list-rich" aria-hidden="true"></span> SubCategories
+                        </NavLink>
+                    </li>
+                    <li class="nav-item px-3">
+                        <NavLink class="nav-link" href="article">
+                            <span class="oi oi-list-rich" aria-hidden="true"></span> Articles
+                        </NavLink>
+                    </li>
+                }
+            </ul>
+        </Authorized>
+        <NotAuthorized>
+            @* Article Request Page *@
+        </NotAuthorized>
+    </AuthorizeView>
+
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private bool expandAdminNav;
+    private bool expandSubNav;
+    private bool expandArticleNav;
+
+    private int clickedMenu = 0;
+    private int clickedSubMenu = 0;
+
+    private bool hasPageName = true;
+    private bool hasSubPageName = true;
+
+    private int prevClickedMenu = 0;
+    private int prevClickedSubMenu = 0;
+
+    public IEnumerable<MenuInfo> menuList;
+
+    private string NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        if (hasPageName)
+        {
+            collapseNavMenu = !collapseNavMenu;
+        }
+    }
+
+    public void GetIsClicked(MenuInfo mn)
+    {
+        clickedMenu = mn.MenuId;
+
+        if (prevClickedMenu != clickedMenu)
+        {
+            expandSubNav = false;
+            if (mn.PageName != "" || mn.PageName == null || mn.MenuName == "Home")
+            {
+                expandSubNav = true;
+                hasPageName = true;
+            }
+            else
+            {
+                expandSubNav = !expandSubNav;
+                hasPageName = false;
+            }
+        }
+        else
+        {
+            clickedMenu = 0;
+            expandSubNav = !expandSubNav;
+        }
+
+        prevClickedMenu = clickedMenu;
+    }
+
+    public void GetIsSubClicked(MenuInfo mn)
+    {
+        clickedSubMenu = mn.MenuId;
+
+        if (prevClickedSubMenu != clickedSubMenu)
+        {
+            expandArticleNav = false;
+            if (mn.PageName != "" || mn.PageName == null || mn.MenuName == "Home")
+            {
+                expandArticleNav = true;
+                hasSubPageName = true;
+            }
+            else
+            {
+                expandArticleNav = !expandArticleNav;
+                hasSubPageName = false;
+            }
+        }
+        else
+        {
+            clickedSubMenu = 0;
+            expandArticleNav = !expandArticleNav;
+        }
+
+        prevClickedSubMenu = clickedSubMenu;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        menuList = await MenuService.GetMenuData();
+    }
+}

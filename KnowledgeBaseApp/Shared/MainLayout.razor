@@ -1,0 +1,27 @@
+﻿@inherits LayoutComponentBase
+
+<div class="sidebar">
+    <NavMenu />
+</div>
+
+<div class="main">
+    <div class="top-row px-4 auth">
+
+        <div class="btn-group dropdown">
+	        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+            <span class="flag-icon flag-icon-tr"></span> Turkish <span class="caret"></span>
+          </button>
+	        <ul class="dropdown-menu" role="menu">
+		        <li><span class="flag-icon flag-icon-us"></span> English </li>
+                <li><span class="flag-icon flag-icon-nl"></span> Dutch </li>
+	        </ul>
+        </div>
+
+        <LoginDisplay />
+        <a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>
+    </div>
+
+    <div class="content px-4">
+        @Body
+    </div>
+</div>
